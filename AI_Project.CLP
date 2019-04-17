@@ -18,9 +18,10 @@
 )
 
 (deftemplate _or
-    (slot name)
+    (slot name(default-dynamic (gensym*)))
     (slot variable1)
     (slot variable2)
+    (slot commutative (default 0))
 )
 
 (deftemplate _orAndVar
@@ -31,6 +32,7 @@
 (deftemplate _orOrVar
     (slot orName)
     (slot variable)
+    (slot associative (default 0))
 )
 
 (deftemplate _orAndOr
@@ -39,8 +41,8 @@
 )
 
 (deftemplate _orAndImply
-    (slot orName1)
-    (slot implyName1)
+    (slot orName)
+    (slot implyName)
 )
 
 (deftemplate _orOrOr
@@ -49,9 +51,10 @@
 )
 
 (deftemplate _and
-    (slot name)
+    (slot name (default-dynamic (gensym*)))
     (slot variable1)
     (slot variable2)
+    (slot commutative (default 0))
 )
 
 (deftemplate _andOrVar
@@ -62,6 +65,7 @@
 (deftemplate _andAndVar
     (slot andName)
     (slot variable)
+    (slot associative (default 0))
 )
 
 (deftemplate _andAndAnd
@@ -75,7 +79,7 @@
 )
 
 (deftemplate _imply
-    (slot name)
+    (slot name(default-dynamic (gensym*)))
     (slot variable1)
     (slot variable2)
 )
@@ -95,6 +99,13 @@
      (_and (name 99)(variable1 Q) (variable2 R))
      (_andOrVar (andName 99) (variable P))
 
+    ; * the associative law: ((P ∧ Q) ∧ R) ≡ (P ∧ (Q ∧ R)) 
+    (variable (name S) (negative 1))
+    (variable (name T) (negative 1))
+    (variable (name U) (negative 0))
+    (_and (name 222)(variable1 S) (variable2 T))
+    (_andAndVar (andName 222) (variable U))
+
     ; de Morgan’s law: ¬ (P ∧ Q) ≡ (¬ P ∨ ¬Q)
     ; (variable (name P) (negative 1))
     ; (variable (name Q) (negative 0))
@@ -108,37 +119,29 @@
     ; (_or (variable1 P) (variable2 Q))
 )
 
-; * the commutative laws: (P ∧ Q) ≡ (Q ∧ P) and (P ∨ Q) ≡ (Q ∨ P) 
-; * the associative law: ((P ∧ Q) ∧ R) ≡ (P ∧ (Q ∧ R)) 
-; * the associative law: ((P ∨ Q) ∨ R) ≡ (P ∨ (Q ∨ R))
-
-(defrule orNaming
-    ?out <- (_or (name nil))
+; * the commutative laws: (P ∧ Q) ≡ (Q ∧ P) 
+(defrule commutativeAnd
+    ?out <- (_and (variable1 ?x)(variable2 ?y)(commutative ?c&:(< ?c 2)))
 => 
-    (bind ?*orNum1* (+ 1 ?*orNum1*))
-    (modify ?out (name ?*orNum1*) )
+    (bind ?c (+ 1 ?c))
+    (modify ?out (variable1 ?y)(variable2 ?x)(commutative ?c))
 )
 
-(defrule andNaming
-    ?out <- (_and (name nil))
+; * the commutative laws: (P ∨ Q) ≡ (Q ∨ P) 
+(defrule commutativeOr
+    ?out <- (_or (variable1 ?x)(variable2 ?y)(commutative ?c&:(< ?c 2)))
 => 
-    (bind ?*andNum1* (+ 1 ?*andNum1*))
-    (modify ?out (name ?*andNum1*) )
+    (bind ?c (+ 1 ?c))
+    (modify ?out (variable1 ?y)(variable2 ?x)(commutative ?c))
 )
 
-(defrule implyNaming
-    ?out <- (_imply (name nil))
-=> 
-    (bind ?*implyNum1* (+ 1 ?*implyNum1*))
-    (modify ?out (name ?*implyNum1*) )
-)
 
 (defrule implyOrChange1
     ?out <- (_orAndOr (orName1 ?x)(orName2 ?y))
     (_or (name ?x))
     (_imply (name ?y))
 => 
-    (assert (_orAndImply (orName1 ?x)(implyName1 ?y)))
+    (assert (_orAndImply (orName ?x)(implyName ?y)))
     (retract ?out)
 )
 
@@ -148,8 +151,107 @@
     (_imply (name ?x))
 => 
     (retract ?out)  
-    (assert (_orAndImply (orName1 ?y)(implyName1 ?x)))
+    (assert (_orAndImply (orName ?y)(implyName ?x)))
 )
+
+; * the associative law: ((P ∧ Q) ∧ R) ≡ (P ∧ (Q ∧ R)) 
+(defrule associativeAnd
+    ?out0 <- (_andAndVar (andName ?n)(variable ?z)(associative ?a&:(< ?a 2)))
+    ?out1 <- (_and (name ?n)(variable1 ?x)(variable2 ?y))
+    (variable (name ?x) (negative ?isN3))
+    (variable (name ?y) (negative ?isN4))
+    (variable (name ?z) (negative ?isN5))
+=>
+    (bind ?a (+ 1 ?a))
+    (modify ?out0 (variable ?x)(associative ?a))
+    (modify ?out1 (variable1 ?y)(variable2 ?z))
+    (if (= ?isN3 1)
+        then
+            (if (= ?isN4 1)
+                then
+                    (if (= ?isN5 1)
+                        then
+                            (format t "Associative Law : ((~%s AND ~%s) AND ~%s) == (~%s AND (~%s AND ~%s))%n" ?x ?y ?z ?x ?y ?z)
+                        else
+                            (format t "Associative Law : ((~%s AND ~%s) AND %s) == (~%s AND (~%s AND %s))%n" ?x ?y ?z ?x ?y ?z)
+                    )
+                else
+                    (if (= ?isN5 1)
+                        then
+                            (format t "Associative Law : ((~%s AND %s) AND ~%s) == (~%s AND (%s AND ~%s))%n" ?x ?y ?z ?x ?y ?z)
+                        else
+                            (format t "Associative Law : ((~%s AND %s) AND %s) == (~%s AND (%s AND %s))%n" ?x ?y ?z ?x ?y ?z)
+                )
+            )   
+        else
+            (if (= ?isN4 1)
+                then
+                    (if (= ?isN5 1)
+                        then
+                            (format t "Associative Law : ((%s AND ~%s) AND ~%s) == (%s AND (~%s AND ~%s))%n" ?x ?y ?z ?x ?y ?z)
+                        else
+                            (format t "Associative Law : ((%s AND ~%s) AND %s) == (%s AND (~%s AND %s))%n" ?x ?y ?z ?x ?y ?z)
+                    )
+                else
+                    (if (= ?isN5 1)
+                        then
+                            (format t "Associative Law : ((%s AND %s) AND ~%s) == (%s AND (%s AND ~%s))%n" ?x ?y ?z ?x ?y ?z)
+                        else
+                            (format t "Associative Law : ((%s AND %s) AND %s) == (%s AND (%s AND %s))%n" ?x ?y ?z ?x ?y ?z)
+                    )
+            )   
+    ) 
+)
+
+; * the associative law: ((P ∨ Q) ∨ R) ≡ (P ∨ (Q ∨ R))
+(defrule associativeOr
+    ?out0 <- (_orOrVar (orName ?n)(variable ?z)(associative ?a&:(< ?a 2)))
+    ?out1 <- (_or (name ?n)(variable1 ?x)(variable2 ?y))
+    (variable (name ?x) (negative ?isN3))
+    (variable (name ?y) (negative ?isN4))
+    (variable (name ?z) (negative ?isN5))
+=>
+    (bind ?a (+ 1 ?a))
+    (modify ?out0 (variable ?x)(associative ?a))
+    (modify ?out1 (variable1 ?y)(variable2 ?z))
+    (if (= ?isN3 1)
+        then
+            (if (= ?isN4 1)
+                then
+                    (if (= ?isN5 1)
+                        then
+                            (format t "Associative Law : ((~%s OR ~%s) OR ~%s) == (~%s OR (~%s OR ~%s))%n" ?x ?y ?z ?x ?y ?z)
+                        else
+                            (format t "Associative Law : ((~%s OR ~%s) OR %s) == (~%s OR (~%s OR %s))%n" ?x ?y ?z ?x ?y ?z)
+                    )
+                else
+                    (if (= ?isN5 1)
+                        then
+                            (format t "Associative Law : ((~%s OR %s) OR ~%s) == (~%s OR (%s OR ~%s))%n" ?x ?y ?z ?x ?y ?z)
+                        else
+                            (format t "Associative Law : ((~%s OR %s) OR %s) == (~%s OR (%s OR %s))%n" ?x ?y ?z ?x ?y ?z)
+                )
+            )   
+        else
+            (if (= ?isN4 1)
+                then
+                    (if (= ?isN5 1)
+                        then
+                            (format t "Associative Law : ((%s OR ~%s) OR ~%s) == (%s OR (~%s OR ~%s))%n" ?x ?y ?z ?x ?y ?z)
+                        else
+                            (format t "Associative Law : ((%s OR ~%s) OR %s) == (%s OR (~%s OR %s))%n" ?x ?y ?z ?x ?y ?z)
+                    )
+                else
+                    (if (= ?isN5 1)
+                        then
+                            (format t "Associative Law : ((%s OR %s) OR ~%s) == (%s OR (%s OR ~%s))%n" ?x ?y ?z ?x ?y ?z)
+                        else
+                            (format t "Associative Law : ((%s OR %s) OR %s) == (%s OR (%s OR %s))%n" ?x ?y ?z ?x ?y ?z)
+                    )
+            )   
+    ) 
+)
+
 
 ; - the distributive law: P ∨ (Q ∧ R) ≡ (P ∨ Q) ∧ (P ∨ R)
 (defrule distributive1
