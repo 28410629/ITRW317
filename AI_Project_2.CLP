@@ -33,11 +33,13 @@
 ; ======================================================================================
 
 (deffacts identities
-    (sent (symb P)(isNeg -1))
-    (sent (symb Q)(isNeg -1))
-    (sent (symb R)(isNeg -1))
-    ; (sent (symb P Q)(con OR)(isNeg -1 1)(brac -1))
-    ; (sent (symb R T)(con AND)(isNeg 1 -1)(brac -1))
+    ; test 1 according to email
+    ; (sent (symb P)(isNeg -1))
+    ; (sent (symb Q)(isNeg -1))
+
+    ; test de morgan according to email
+    (sent (name morgan)(symb A B)(con AND)(isNeg -1 -1))
+    (applyNeg (name morgan))
 )
 
 ; ======================================================================================
@@ -130,11 +132,15 @@
     (test (= (str-compare ?c OR) 0))
     (test (=  ?n1 -1))
     (test (=  ?n2 -1))
-    (not (sent (symb ?x ?y)(con ->)(isNeg 1 -1)(brac -1)))
+    (not (sent (symb ?x ?y)(con ->)(isNeg ?N1&:(= ?N1 (* ?n1 -1)) ?N2&:(= ?N2 (* ?n2 -1)))(brac -1)))
 =>
     (bind ?c1 ->)
-    (assert (sent (symb ?x ?y)(con ?c1)(isNeg 1 -1)(brac -1)))
-    (format t "(~%s %s %s) ... Implication Rule %n" ?x ?c1 ?y)
+    (bind ?N1 (inverseNeg ?n1))
+    (bind ?N2 (inverseNeg ?n2))
+    (assert (sent (symb ?x ?y)(con ?c1)(isNeg ?N1 ?N2)(brac -1)))
+    (bind ?x (formatVar ?x ?N1))
+    (bind ?y (formatVar ?y ?N2))
+    (format t "(%s %s %s) ... Implication Rule %n" ?x ?c1 ?y)
 )
 
 (defrule implication31
@@ -142,12 +148,14 @@
     (test (= (str-compare ?c1 OR) 0))
     (test (=  ?n1 -1))
     (test (=  ?n2 -1))
-    (not (sent (symb ?x ?y ?z)(con -> ?c2)(isNeg 1 -1 ?n3)(brac 1)))
+    (not (sent (symb ?x ?y ?z)(con -> ?c2)(isNeg ?N1&:(= ?N1 (* ?n1 -1)) ?N2&:(= ?N2 (* ?n2 -1)) ?n3)(brac 1)))
 =>
     (bind ?c1 ->)
-    (assert (sent (symb ?x ?y ?z)(con ?c1 ?c2)(isNeg 1 -1 ?n3)(brac 1)))
-    (bind ?x (formatVar ?x 1))
-    (bind ?y (formatVar ?y -1))
+    (bind ?N1 (inverseNeg ?n1))
+    (bind ?N2 (inverseNeg ?n2))
+    (assert (sent (symb ?x ?y ?z)(con ?c1 ?c2)(isNeg ?N1 ?N2 ?n3)(brac 1)))
+    (bind ?x (formatVar ?x ?N1))
+    (bind ?y (formatVar ?y ?N2))
     (bind ?z (formatVar ?z ?n3))
     (format t "((%s %s %s) %s %s) ... Implication Rule %n" ?x ?c1 ?y ?c2 ?z)
 )
@@ -157,13 +165,15 @@
     (test (= (str-compare ?c2 OR) 0))
     (test (=  ?n2 -1))
     (test (=  ?n3 -1))
-    (not (sent (symb ?x ?y ?z)(con ?c1 ->)(isNeg ?n1 1 -1 )(brac 2)))
+    (not (sent (symb ?x ?y ?z)(con ?c1 ->)(isNeg ?n1 ?N1&:(= ?N1 (* ?n1 -1)) ?N2&:(= ?N2 (* ?n2 -1)) )(brac 2)))
 =>
     (bind ?c2 ->)
-    (assert (sent (symb ?x ?y ?z)(con ?c1 ->)(isNeg ?n1 1 -1 )(brac 2)))
+    (bind ?N1 (inverseNeg ?n1))
+    (bind ?N2 (inverseNeg ?n2))
+    (assert (sent (symb ?x ?y ?z)(con ?c1 ->)(isNeg ?n1 ?N1 ?N2 )(brac 2)))
     (bind ?x (formatVar ?x ?n1))
-    (bind ?y (formatVar ?y 1))
-    (bind ?z (formatVar ?z -1))
+    (bind ?y (formatVar ?y ?N1))
+    (bind ?z (formatVar ?z ?N2))
     (format t "(%s %s (%s %s %s)) ... Implication Rule %n" ?x ?c1 ?y ?c2 ?z)
 )
 
@@ -172,15 +182,17 @@
     (test (= (str-compare ?c1 OR) 0))
     (test (= ?n1 -1))
     (test (= ?n2 -1))
-    (not (sent (symb ?x ?y ?z ?q)(con -> ?c2 ?c3)(isNeg 1 -1 ?n3 ?n4)(brac 4)))
+    (not (sent (symb ?x ?y ?z ?q)(con -> ?c2 ?c3)(isNeg ?N1&:(= ?N1 (* ?n1 -1)) ?N2&:(= ?N2 (* ?n2 -1)) ?n3 ?n4)(brac 4)))
 =>
     (bind ?c1 ->)
-    (assert (symb ?x ?y ?z ?q)(con -> ?c2 ?c3)(isNeg 1 -1 ?n3 ?n4)(brac 4))
-    (bind ?x (formatVar ?x 1))
-    (bind ?y (formatVar ?y -1))
+    (bind ?N1 (inverseNeg ?n1))
+    (bind ?N2 (inverseNeg ?n2))
+    (assert (symb ?x ?y ?z ?q)(con -> ?c2 ?c3)(isNeg ?N1 ?N2 ?n3 ?n4)(brac 4))
+    (bind ?x (formatVar ?x ?N1))
+    (bind ?y (formatVar ?y ?N2))
     (bind ?z (formatVar ?z ?n3))
     (bind ?q (formatVar ?q ?n4))
-    (format t "((%s %s %s) %s (%s %s %s)) ... Contrapositive Law %n" ?x ?c1 ?y ?c2 ?z ?c3 ?q)
+    (format t "((%s %s %s) %s (%s %s %s)) ... Implication Rule %n" ?x ?c1 ?y ?c2 ?z ?c3 ?q)
 )
 
 (defrule implication42
@@ -188,15 +200,17 @@
     (test (= (str-compare ?c3 OR) 0))
     (test (= ?n3 -1))
     (test (= ?n4 -1))
-    (not (sent (symb ?x ?y ?z ?q)(con ?c1 ?c2 ->)(isNeg ?n1 ?n2 1 -1)(brac 4)))
+    (not (sent (symb ?x ?y ?z ?q)(con ?c1 ?c2 ->)(isNeg ?n1 ?n2 ?N1&:(= ?N1 (* ?n1 -1)) ?N2&:(= ?N2 (* ?n2 -1)))(brac 4)))
 =>
     (bind ?c1 ->)
-    (assert (sent (symb ?x ?y ?z ?q)(con ?c1 ?c2 ->)(isNeg ?n1 ?n2 1 -1)(brac 4)))
+    (bind ?N1 (inverseNeg ?n1))
+    (bind ?N2 (inverseNeg ?n2))
+    (assert (sent (symb ?x ?y ?z ?q)(con ?c1 ?c2 ->)(isNeg ?n1 ?n2 ?N1 ?N2)(brac 4)))
     (bind ?x (formatVar ?x ?n1))
     (bind ?y (formatVar ?y ?n2))
-    (bind ?z (formatVar ?z 1))
-    (bind ?q (formatVar ?q -1))
-    (format t "((%s %s %s) %s (%s %s %s)) ... Contrapositive Law %n" ?x ?c1 ?y ?c2 ?z ?c3 ?q)
+    (bind ?z (formatVar ?z ?N1))
+    (bind ?q (formatVar ?q ?N2))
+    (format t "((%s %s %s) %s (%s %s %s)) ... Implication Rule %n" ?x ?c1 ?y ?c2 ?z ?c3 ?q)
 )
 
 ; the contrapositive law: (P → Q) ≡ (¬ Q → ¬ P)
@@ -276,15 +290,39 @@
 ; de Morgan’s law: ¬ (P ∨ Q) ≡ (¬ P ∧ ¬ Q) and ¬ (P ∧ Q) ≡ (¬ P ∨¬ Q)
 (defrule deMorganOr
     (sent (name ?fact)(symb ?x ?y)(con ?c)(isNeg ?n1 ?n2)(brac -1))
-    ?out <- (applyNeg (name ?fact))
+    (applyNeg (name ?fact))
     (test (= (str-compare ?c OR) 0))
     (not (sent (symb ?x ?y)(con AND)(isNeg ?N1&:(= ?N1 (* ?n1 -1)) ?N2&:(= ?N2 (* ?n2 -1)))(brac -1)))
 =>
-    (retract ?out)
     (bind ?n1 (inverseNeg ?n1))
     (bind ?n2 (inverseNeg ?n2))
     (bind ?c (inverseCon ?c))
-    (assert (sent (symb ?x ?y)(con ?c)(isNeg ?n1 ?n2)(brac -1)))
+    (assert (sent (name morganVar)(symb ?x ?y)(con ?c)(isNeg ?n1 ?n2)(brac -1)))
+)
+
+(defrule morganVar1
+    (sent (name morganVar)(symb ?x ?y)(con ?c)(isNeg ?n1 ?n2)(brac -1))
+    (not (sent (symb ?x)(isNeg ?n1)))
+=>
+    (assert (sent (symb ?x)(isNeg ?n1)))
+)
+
+(defrule morganVar2
+    (sent (name morganVar)(symb ?x ?y)(con ?c)(isNeg ?n1 ?n2)(brac -1))
+    (not (sent (symb ?y)(isNeg ?n2)))
+=>
+    (assert (sent (symb ?y)(isNeg ?n2)))
+)
+
+(defrule morganVar
+    ?out <- (sent (name morganVar)(symb ?x ?y)(con ?c)(isNeg ?n1 ?n2)(brac -1))
+    ?out2 <- (applyNeg (name removeM))
+    (sent (symb ?x)(isNeg ?n1))
+    (sent (symb ?y)(isNeg ?n2))
+=>
+    (retract ?out)
+    (retract ?out2)
+    (assert (sent (symb ?x ?y)(con ?c)(isNeg ?n1 ?n2)(brac -1))) 
 )
 
 (defrule deMorganAnd
@@ -293,11 +331,11 @@
     (test (= (str-compare ?c AND) 0))
     (not (sent (symb ?x ?y)(con OR)(isNeg ?N1&:(= ?N1 (* ?n1 -1)) ?N2&:(= ?N2 (* ?n2 -1)))(brac -1)))
 =>
-    (retract ?out)
     (bind ?n1 (inverseNeg ?n1))
     (bind ?n2 (inverseNeg ?n2))
     (bind ?c (inverseCon ?c))
-    (assert (sent (symb ?x ?y)(con ?c)(isNeg ?n1 ?n2)(brac -1)))
+    (assert (sent (name morganVar)(symb ?x ?y)(con ?c)(isNeg ?n1 ?n2)(brac -1)))
+    (modify ?out (name removeM))
 )
 
 ; the associative law: ((P ∧ Q) ∧ R) ≡ (P ∧ (Q ∧ R))
@@ -386,9 +424,9 @@
     (sent (symb ?x ?y ?z)(con ?c1 ?c2)(isNeg ?n1 ?n2 ?n3)(brac 1))
     (test (= (str-compare ?c1 OR) 0))
     (test (= (str-compare ?c2 AND) 0))
-    (test (= ?n3 -1))
-    (or (test (= ?n1 -1))
-        (test (= ?n2 -1)))
+     (test (= ?n3 -1))
+     (or (test (= ?n1 -1))
+         (test (= ?n2 -1)))
     (not (sent (symb ?x ?z ?y ?z)(con ?c2 ?c1 ?c2)(isNeg ?n1 ?n3 ?n2 ?n3)(brac 4)))
 =>
     (assert (sent (symb ?x ?z ?y ?z)(con ?c2 ?c1 ?c2)(isNeg ?n1 ?n3 ?n2 ?n3)(brac 4)))
@@ -434,7 +472,7 @@
     (sent (symb ?x)(con -1)(isNeg ?n1)(brac -1))
     (sent (symb ?y)(con -1)(isNeg ?n2)(brac -1))
     (not (test (= (str-compare ?x ?y) 0)))
-    (or (test (= ?n1 -1)) 
+     (or (test (= ?n1 -1)) 
         (test (= ?n2 -1)))
     (not (sent (symb ?x ?y)(con OR)(isNeg ?n1 ?n2)(brac -1)))
 =>
@@ -452,8 +490,8 @@
     (not (test (= (str-compare ?x ?z) 0)))
     (not (test (= (str-compare ?y ?z) 0)))
      (or (test (= ?n1 -1)) 
-         (test (= ?n2 -1))
-         (test (= ?n3 -1)))
+          (test (= ?n2 -1))
+          (test (= ?n3 -1)))
     (not (sent (symb ?x ?y ?z)(con OR OR)(isNeg ?n1 ?n2 ?n3)(brac -1)))
 =>
     (assert (sent (symb ?x ?y ?z)(con OR OR)(isNeg ?n1 ?n2 ?n3)(brac -1)))
@@ -478,8 +516,8 @@
 
 (defrule _triggerBracketOr2
     (sent (symb ?x ?y ?z)(con ?c1&OR ?c2&AND)(isNeg ?n1 ?n2 ?n3)(brac -1))
-    (or (test (= ?n1 -1)) 
-        (test (= ?n2 -1)))
+     (or (test (= ?n1 -1)) 
+         (test (= ?n2 -1)))
     (test (= ?n3 -1))
     (not (sent (symb ?x ?y ?z)(con ?c1 ?c2)(isNeg ?n1 ?n2 ?n3)(brac 1)))
 =>
@@ -492,8 +530,8 @@
 
 (defrule _triggerBracketAnd1
     (sent (symb ?x ?y ?z)(con ?c1&AND ?c2&OR)(isNeg ?n1 ?n2 ?n3)(brac -1))
-    (test (= ?n1 -1)) 
-    (test (= ?n2 -1))
+     (test (= ?n1 -1)) 
+     (test (= ?n2 -1))
     (not (sent (symb ?x ?y ?z)(con ?c1 ?c2)(isNeg ?n1 ?n2 ?n3)(brac 1)))
 =>
     (assert (sent (symb ?x ?y ?z)(con ?c1 ?c2)(isNeg ?n1 ?n2 ?n3)(brac 1)))
@@ -505,9 +543,9 @@
 
 (defrule _triggerBracketAnd2
     (sent (symb ?x ?y ?z)(con ?c1&AND ?c2&AND)(isNeg ?n1 ?n2 ?n3)(brac -1))
-    (test (= ?n1 -1)) 
-    (test (= ?n2 -1))
-    (test (= ?n3 -1))
+     (test (= ?n1 -1)) 
+     (test (= ?n2 -1))
+     (test (= ?n3 -1))
     (not (sent (symb ?x ?y ?z)(con ?c1 ?c2)(isNeg ?n1 ?n2 ?n3)(brac 1)))
 =>
     (assert (sent (symb ?x ?y ?z)(con ?c1 ?c2)(isNeg ?n1 ?n2 ?n3)(brac 1)))
@@ -516,3 +554,5 @@
     (bind ?z (formatVar ?z ?n3))
     (format t "((%s %s %s) %s %s)%n" ?x ?c1 ?y ?c2 ?z)
 ) 
+
+
